@@ -2,13 +2,18 @@
 #include <Servo.h> // Use MegaTinyCore implementation of Servo
 #include <Wire.h>
 
-Servo servoP;
-Servo servoR;
+Servo servoX;
 Servo servoY;
+Servo servoZ;
+int x = 1500;
+int y = 1500;
+int z = 1500;
+int yawPrev = 0;
+int yawTotal = 0;
 
-#define PITCHPIN 0
-#define ROLLPIN 1
-#define YAWPIN 10
+#define XPIN 0
+#define YPIN 1
+#define ZPIN 10
 
 #define ERRORPIN 4 // Pin gets pulled high in case of instantiation error
 
@@ -21,6 +26,12 @@ void setup() {
   pinMode(NOTIFPIN, OUTPUT);
   digitalWrite(ERRORPIN, LOW);
   digitalWrite(NOTIFPIN, LOW);
+  servoX.attach(XPIN);
+  servoY.attach(YPIN);
+  servoZ.attach(ZPIN);
+  servoX.writeMicroseconds(x);
+  servoY.writeMicroseconds(y);
+  servoZ.writeMicroseconds(z);
   delay(1000);
   if (!IMUBegin(OPERATION_MODE_NDOF)){
     while (1){
@@ -30,16 +41,55 @@ void setup() {
       delay(100);
     }
   }
-  servoP.attach(PITCHPIN);
-  servoR.attach(ROLLPIN);
-  servoY.attach(YAWPIN);
 }
 
 void loop() {
   float euler[3];
   getEuler(euler);
   //x = euler[0], y = euler[1], z = euler[2]
-  
+  if(abs(euler[0] - yawPrev)<10){}
+  else{
+    if((euler[0] - yawPrev)<0){yawTotal += 360;}
+    else{yawTotal -= 360;}
+  }
+  yawTotal += euler[0] - yawPrev;
+  yawPrev = euler[0];
+  int cut = 0;
+  int jerk = 0;
+  int celerity = 100;
+  if(yawTotal>=cut)
+  {
+    x+=map(yawTotal,cut,180,jerk,celerity);
+  }
+  else if(yawTotal<=-cut)
+  {
+    x-=map(yawTotal,-180,-cut,celerity,jerk);
+  }
+  if(euler[1]>=cut)
+  {
+    y-=map(euler[1],cut,90,jerk,celerity);
+  }
+  else if(euler[1]<=-cut)
+  {
+    y+=map(euler[1],-90,-cut,celerity,jerk);
+  }
+  if(euler[2]>=cut)
+  {
+    z-=map(euler[2],cut,90,jerk,celerity);
+  }
+  else if(euler[2]<=-cut)
+  {
+    z+=map(euler[2],-90,-cut,celerity,jerk);
+  }
+  if(x<1000){x=1500; servoX.writeMicroseconds(x); delay(2000);}
+  if(x>2000){x=1500; servoX.writeMicroseconds(x); delay(2000);}
+  if(y<1000){y=1000;}
+  if(y>2000){y=2000;}
+  if(z<1000){z=1000;}
+  if(z>2000){z=2000;}
+  servoX.writeMicroseconds(x);
+  servoY.writeMicroseconds(y);
+  servoZ.writeMicroseconds(z);
   //Comment out the following four lines in final implementation:
   Serial.print("X: " + String(euler[0]));
   Serial.print(" Y: " + String(euler[1]));
