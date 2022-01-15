@@ -8,8 +8,8 @@ Servo servoZ;
 int x = 1500;
 int y = 1500;
 int z = 1500;
-int yawPrev = 0;
-int yawTotal = 0;
+float yawPrev = 0;
+float yawTotal = 0;
 
 #define XPIN 0
 #define YPIN 1
@@ -45,25 +45,24 @@ void setup() {
 
 void loop() {
   float euler[3];
-  getEuler(euler);
+  getQuat(euler);
   //x = euler[0], y = euler[1], z = euler[2]
-  if(abs(euler[0] - yawPrev)<10){}
-  else{
+  yawTotal += euler[0] - yawPrev;
+  if(abs(euler[0] - yawPrev)>180){
     if((euler[0] - yawPrev)<0){yawTotal += 360;}
     else{yawTotal -= 360;}
   }
-  yawTotal += euler[0] - yawPrev;
   yawPrev = euler[0];
   int cut = 0;
   int jerk = 0;
   int celerity = 100;
   if(yawTotal>=cut)
   {
-    x+=map(yawTotal,cut,180,jerk,celerity);
+    x-=map((int)(yawTotal+180)%360-180,cut,180,jerk,celerity);
   }
   else if(yawTotal<=-cut)
   {
-    x-=map(yawTotal,-180,-cut,celerity,jerk);
+    x+=map((int)(yawTotal+180)%360-180,-180,-cut,celerity,jerk);
   }
   if(euler[1]>=cut)
   {
@@ -81,8 +80,12 @@ void loop() {
   {
     z+=map(euler[2],-90,-cut,celerity,jerk);
   }
-  if(x<1000){x=1500; servoX.writeMicroseconds(x); delay(2000);}
-  if(x>2000){x=1500; servoX.writeMicroseconds(x); delay(2000);}
+  Serial.print("SERVO X: " + String(x));
+  Serial.print(" Y: " + String(y));
+  Serial.print(" Z: " + String(z));
+  Serial.println();
+  if(x<1000){x=1500; servoX.writeMicroseconds(x); yawTotal = (int)yawTotal%360; digitalWrite(NOTIFPIN, HIGH); delay(3000); digitalWrite(NOTIFPIN, LOW);}
+  if(x>2000){x=1500; servoX.writeMicroseconds(x); yawTotal = (int)yawTotal%360; digitalWrite(NOTIFPIN, HIGH); delay(3000); digitalWrite(NOTIFPIN, LOW);}
   if(y<1000){y=1000;}
   if(y>2000){y=2000;}
   if(z<1000){z=1000;}
@@ -90,10 +93,11 @@ void loop() {
   servoX.writeMicroseconds(x);
   servoY.writeMicroseconds(y);
   servoZ.writeMicroseconds(z);
-  //Comment out the following four lines in final implementation:
-  Serial.print("X: " + String(euler[0]));
+  //Debug print
+  Serial.print("SENSOR X: " + String(euler[0]));
   Serial.print(" Y: " + String(euler[1]));
   Serial.print(" Z: " + String(euler[2]));
+  Serial.print(" YAWTOTAL: " + String(yawTotal));
   Serial.println();
 }
 
@@ -159,10 +163,20 @@ bool getQuat(float *buf){
     readLen(BNO055_EULER_H_LSB_ADDR, wireBuf, 8);
 
     const double scale = (1.0 / (1 << 14));
-    buf[0] = (float)(((int16_t)wireBuf[0]) | (((int16_t)wireBuf[1]) << 8)) * scale;
-    buf[1] = (float)(((int16_t)wireBuf[2]) | (((int16_t)wireBuf[3]) << 8)) * scale;
-    buf[2] = (float)(((int16_t)wireBuf[4]) | (((int16_t)wireBuf[5]) << 8)) * scale;
-    buf[3] = (float)(((int16_t)wireBuf[6]) | (((int16_t)wireBuf[7]) << 8)) * scale;
+    double _w = (float)(((int16_t)wireBuf[0]) | (((int16_t)wireBuf[1]) << 8)) * scale;
+    double _x = (float)(((int16_t)wireBuf[2]) | (((int16_t)wireBuf[3]) << 8)) * scale;
+    double _y = (float)(((int16_t)wireBuf[4]) | (((int16_t)wireBuf[5]) << 8)) * scale;
+    double _z = (float)(((int16_t)wireBuf[6]) | (((int16_t)wireBuf[7]) << 8)) * scale;
+
+    //convert to euler
+    double sqw = _w * _w;
+    double sqx = _x * _x;
+    double sqy = _y * _y;
+    double sqz = _z * _z;
+
+    buf[0] = atan2(2.0 * (_x * _y + _z * _w), (sqx - sqy - sqz + sqw))*180/PI;
+    buf[1] = asin(-2.0 * (_x * _z - _y * _w) / (sqx + sqy + sqz + sqw))*180/PI;
+    buf[2] = atan2(2.0 * (_y * _z + _x * _w), (-sqx - sqy + sqz + sqw))*180/PI;
 
     return true;
 }
