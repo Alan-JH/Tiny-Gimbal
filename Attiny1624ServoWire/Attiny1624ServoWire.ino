@@ -8,8 +8,9 @@ Servo servoZ;
 int x = 1500;
 int y = 1500;
 int z = 1500;
-float yawPrev = 0;
-float yawTotal = 0;
+bool ccw, cw;
+float yawPrev;
+float yawTotal;
 
 #define XPIN 0
 #define YPIN 1
@@ -45,25 +46,36 @@ void setup() {
 
 void loop() {
   float euler[3];
-  getQuat(euler);
+  getEuler(euler);
   //x = euler[0], y = euler[1], z = euler[2]
-  yawTotal += euler[0] - yawPrev;
+  /*yawTotal += euler[0] - yawPrev;
   if(abs(euler[0] - yawPrev)>180){
     if((euler[0] - yawPrev)<0){yawTotal += 360;}
     else{yawTotal -= 360;}
   }
-  yawPrev = euler[0];
+  yawPrev = euler[0];*/
+  yawTotal = euler[0];
+  if (euler[0] > 180){
+    yawTotal -= 360;
+  }
   int cut = 0;
   int jerk = 0;
-  int celerity = 100;
+  int celerity = 50;
+
   if(yawTotal>=cut)
   {
-    x-=map((int)(yawTotal+180)%360-180,cut,180,jerk,celerity);
-  }
-  else if(yawTotal<=-cut)
+      if(ccw==true){x-=celerity;}
+      else {x+=map(yawTotal,cut,180,jerk,celerity);}
+      cw=false;
+  } 
+  if(x>2000){x = 2000; ccw=true;}
+  if(yawTotal<=cut)
   {
-    x+=map((int)(yawTotal+180)%360-180,-180,-cut,celerity,jerk);
-  }
+      if(cw==true){x+=celerity;}
+      else {x-=map(yawTotal,-180,-cut,celerity,jerk);}
+      ccw=false;
+  } 
+  if(x<1000){cw=true;}
   if(euler[1]>=cut)
   {
     y-=map(euler[1],cut,90,jerk,celerity);
@@ -84,8 +96,8 @@ void loop() {
   Serial.print(" Y: " + String(y));
   Serial.print(" Z: " + String(z));
   Serial.println();
-  if(x<1000){x=1500; servoX.writeMicroseconds(x); yawTotal = (int)yawTotal%360; digitalWrite(NOTIFPIN, HIGH); delay(3000); digitalWrite(NOTIFPIN, LOW);}
-  if(x>2000){x=1500; servoX.writeMicroseconds(x); yawTotal = (int)yawTotal%360; digitalWrite(NOTIFPIN, HIGH); delay(3000); digitalWrite(NOTIFPIN, LOW);}
+  //if(x<1000){x=1500; servoX.writeMicroseconds(x); yawTotal = (int)yawTotal%360; digitalWrite(NOTIFPIN, HIGH); delay(3000); digitalWrite(NOTIFPIN, LOW);}
+  //if(x>2000){x=1500; servoX.writeMicroseconds(x); yawTotal = (int)yawTotal%360; digitalWrite(NOTIFPIN, HIGH); delay(3000); digitalWrite(NOTIFPIN, LOW);}
   if(y<1000){y=1000;}
   if(y>2000){y=2000;}
   if(z<1000){z=1000;}
