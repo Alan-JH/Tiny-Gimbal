@@ -8,13 +8,17 @@ Servo servoZ;
 int x = 1500;
 int y = 1500;
 int z = 1500;
-bool ccw, cw;
-float yawPrev;
+int xbusy; //millisecond timestamp of when the x servo was last told to spin around one rotation
 float yawTotal;
 
 #define XPIN 0
 #define YPIN 1
 #define ZPIN 10
+
+#define MINPULSE 600
+#define MAXPULSE 2400
+
+#define SPINDELAY 1500
 
 #define ERRORPIN 4 // Pin gets pulled high in case of instantiation error
 
@@ -24,7 +28,7 @@ void setup() {
   Serial.pins(5, 3);
   Serial.begin(57600, (SERIAL_8N1)); // Debug UART
   pinMode(ERRORPIN, OUTPUT); // Error pin, goes high if error state
-  pinMode(NOTIFPIN, OUTPUT);
+  pinMode(NOTIFPIN, OUTPUT); // Notifies pi when camera is spinning around one rotation
   digitalWrite(ERRORPIN, LOW);
   digitalWrite(NOTIFPIN, LOW);
   servoX.attach(XPIN);
@@ -42,40 +46,29 @@ void setup() {
       delay(100);
     }
   }
+  delay(2000);
 }
 
 void loop() {
   float euler[3];
   getEuler(euler);
   //x = euler[0], y = euler[1], z = euler[2]
-  /*yawTotal += euler[0] - yawPrev;
-  if(abs(euler[0] - yawPrev)>180){
-    if((euler[0] - yawPrev)<0){yawTotal += 360;}
-    else{yawTotal -= 360;}
-  }
-  yawPrev = euler[0];*/
   yawTotal = euler[0];
   if (euler[0] > 180){
     yawTotal -= 360;
   }
-  int cut = 0;
+  int cut = 2;
   int jerk = 0;
-  int celerity = 50;
-
-  if(yawTotal>=cut)
+  int celerity = 100;
+  if(millis() - xbusy > SPINDELAY && yawTotal>=cut)
   {
-      if(ccw==true){x-=celerity;}
-      else {x+=map(yawTotal,cut,180,jerk,celerity);}
-      cw=false;
-  } 
-  if(x>2000){x = 2000; ccw=true;}
-  if(yawTotal<=cut)
+    x+=map(yawTotal,cut,180,jerk,celerity/2);
+  }
+  else if(millis() - xbusy > SPINDELAY && yawTotal<=-cut)
   {
-      if(cw==true){x+=celerity;}
-      else {x-=map(yawTotal,-180,-cut,celerity,jerk);}
-      ccw=false;
-  } 
-  if(x<1000){cw=true;}
+    x-=map(yawTotal,-180,-cut,celerity/2,jerk);
+  }
+  
   if(euler[1]>=cut)
   {
     y-=map(euler[1],cut,90,jerk,celerity);
@@ -96,13 +89,16 @@ void loop() {
   Serial.print(" Y: " + String(y));
   Serial.print(" Z: " + String(z));
   Serial.println();
-  //if(x<1000){x=1500; servoX.writeMicroseconds(x); yawTotal = (int)yawTotal%360; digitalWrite(NOTIFPIN, HIGH); delay(3000); digitalWrite(NOTIFPIN, LOW);}
-  //if(x>2000){x=1500; servoX.writeMicroseconds(x); yawTotal = (int)yawTotal%360; digitalWrite(NOTIFPIN, HIGH); delay(3000); digitalWrite(NOTIFPIN, LOW);}
-  if(y<1000){y=1000;}
-  if(y>2000){y=2000;}
-  if(z<1000){z=1000;}
-  if(z>2000){z=2000;}
-  servoX.writeMicroseconds(x);
+  if(x<MINPULSE){x=MINPULSE + 1333; servoX.writeMicroseconds(x); digitalWrite(NOTIFPIN, HIGH); xbusy = millis(); }
+  if(x>MAXPULSE){x=MAXPULSE - 1333; servoX.writeMicroseconds(x); digitalWrite(NOTIFPIN, HIGH); xbusy = millis(); }
+  if(y<MINPULSE){y=MINPULSE;}
+  if(y>MAXPULSE){y=MAXPULSE;}
+  if(z<MINPULSE){z=MINPULSE;}
+  if(z>MAXPULSE){z=MAXPULSE;}
+  if (millis() - xbusy > SPINDELAY ){
+    digitalWrite(NOTIFPIN, LOW);
+    servoX.writeMicroseconds(x);
+  }
   servoY.writeMicroseconds(y);
   servoZ.writeMicroseconds(z);
   //Debug print
