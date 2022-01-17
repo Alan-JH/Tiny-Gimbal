@@ -8,7 +8,7 @@ Servo servoZ;
 int x = 1500;
 int y = 1500;
 int z = 1500;
-int xbusy; //millisecond timestamp of when the x servo was last told to spin around one rotation
+long xbusy; //millisecond timestamp of when the x servo was last told to spin around one rotation
 float yawTotal;
 
 #define XPIN 0
@@ -20,16 +20,16 @@ float yawTotal;
 
 #define SPINDELAY 1500
 
-#define NOTIFTHRESH 2
+#define NOTIFTHRESH 10
 
 #define ERRORPIN 4 // Pin gets pulled high in case of instantiation error
 
 #define NOTIFPIN 2 // Pin gets pulled high when yaw is reset from 360 to 0, to indicate that camera is not ready.
 
 bool notif;
-int timeon;
-int timeoff;
-int lastread;
+long timeon;
+long timeoff;
+long lastread;
 void print_dutycycle(){
   if (notif){
     timeon += millis()-lastread;
@@ -38,7 +38,7 @@ void print_dutycycle(){
     timeoff += millis()-lastread;
     lastread = millis();
   }
-  Serial.println("Duty Cycle: " + String((float)timeon/(timeon+timeoff)))
+  Serial.println("Time on: " + String(timeon) + " Time off: " + String(timeoff));
 }
 
 void setup() {
@@ -76,7 +76,7 @@ void loop() {
   if (euler[0] > 180){
     yawTotal -= 360;
   }
-  int cut = 2;
+  int cut = 0;
   int jerk = 0;
   int celerity = 100;
   if(millis() - xbusy > SPINDELAY && yawTotal>=cut)
@@ -117,12 +117,12 @@ void loop() {
   if (millis() - xbusy > SPINDELAY ){
     servoX.writeMicroseconds(x);
   }
-  if (abs(yawTotal) > NOTIFTHRESH && abs(euler[1]) > NOTIFTHRESH && abs(euler[2]) > NOTIFTHRESH){
-    digitalWrite(NOTIFPIN, LOW); 
-    notif = false;
-  }else{
-    digitalWrite(NOTIFPIN, HIGH);
+  if (abs(yawTotal) < NOTIFTHRESH && abs(euler[1]) < NOTIFTHRESH && abs(euler[2]) < NOTIFTHRESH){
+    digitalWrite(NOTIFPIN, HIGH); 
     notif = true;
+  }else{
+    digitalWrite(NOTIFPIN, LOW);
+    notif = false;
   }
   servoY.writeMicroseconds(y);
   servoZ.writeMicroseconds(z);
