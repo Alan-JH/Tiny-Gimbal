@@ -20,9 +20,26 @@ float yawTotal;
 
 #define SPINDELAY 1500
 
+#define NOTIFTHRESH 2
+
 #define ERRORPIN 4 // Pin gets pulled high in case of instantiation error
 
 #define NOTIFPIN 2 // Pin gets pulled high when yaw is reset from 360 to 0, to indicate that camera is not ready.
+
+bool notif;
+int timeon;
+int timeoff;
+int lastread;
+void print_dutycycle(){
+  if (notif){
+    timeon += millis()-lastread;
+    lastread = millis();
+  }else{
+    timeoff += millis()-lastread;
+    lastread = millis();
+  }
+  Serial.println("Duty Cycle: " + String((float)timeon/(timeon+timeoff)))
+}
 
 void setup() {
   Serial.pins(5, 3);
@@ -47,7 +64,9 @@ void setup() {
     }
   }
   delay(2000);
+  lastread = millis();
 }
+
 
 void loop() {
   float euler[3];
@@ -89,15 +108,21 @@ void loop() {
   Serial.print(" Y: " + String(y));
   Serial.print(" Z: " + String(z));
   Serial.println();
-  if(x<MINPULSE){x=MINPULSE + 1333; servoX.writeMicroseconds(x); digitalWrite(NOTIFPIN, HIGH); xbusy = millis(); }
-  if(x>MAXPULSE){x=MAXPULSE - 1333; servoX.writeMicroseconds(x); digitalWrite(NOTIFPIN, HIGH); xbusy = millis(); }
+  if(x<MINPULSE){x=MINPULSE + 1333; servoX.writeMicroseconds(x); xbusy = millis(); }
+  if(x>MAXPULSE){x=MAXPULSE - 1333; servoX.writeMicroseconds(x); xbusy = millis(); }
   if(y<MINPULSE){y=MINPULSE;}
   if(y>MAXPULSE){y=MAXPULSE;}
   if(z<MINPULSE){z=MINPULSE;}
   if(z>MAXPULSE){z=MAXPULSE;}
   if (millis() - xbusy > SPINDELAY ){
-    digitalWrite(NOTIFPIN, LOW);
     servoX.writeMicroseconds(x);
+  }
+  if (abs(yawTotal) > NOTIFTHRESH && abs(euler[1]) > NOTIFTHRESH && abs(euler[2]) > NOTIFTHRESH){
+    digitalWrite(NOTIFPIN, LOW); 
+    notif = false;
+  }else{
+    digitalWrite(NOTIFPIN, HIGH);
+    notif = true;
   }
   servoY.writeMicroseconds(y);
   servoZ.writeMicroseconds(z);
@@ -107,6 +132,7 @@ void loop() {
   Serial.print(" Z: " + String(euler[2]));
   Serial.print(" YAWTOTAL: " + String(yawTotal));
   Serial.println();
+  print_dutycycle();
 }
 
 bool IMUBegin(byte mode){
