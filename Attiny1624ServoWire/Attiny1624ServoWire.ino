@@ -20,7 +20,7 @@ float yawTotal;
 
 #define SPINDELAY 1500
 
-#define NOTIFTHRESH 10
+#define NOTIFTHRESH 5
 
 #define ERRORPIN 4 // Pin gets pulled high in case of instantiation error
 
