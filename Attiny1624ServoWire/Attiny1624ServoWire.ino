@@ -63,6 +63,7 @@ void setup() {
       delay(100);
     }
   }
+  setRemap(); //TODO: Figure out remap
   delay(2000);
   lastread = millis();
 }
@@ -212,6 +213,12 @@ bool getQuat(float *buf){
     buf[1] = asin(-2.0 * (_x * _z - _y * _w) / (sqx + sqy + sqz + sqw))*180/PI;
     buf[2] = atan2(2.0 * (_y * _z + _x * _w), (-sqx - sqy + sqz + sqw))*180/PI;
 
+    return true;
+}
+
+bool setRemap(byte remap, byte sign){
+    write8(BNO055_AXIS_MAP_CONFIG_ADDR, remap);
+    write8(BNO055_AXIS_MAP_SIGN_ADDR, sign);
     return true;
 }
 
