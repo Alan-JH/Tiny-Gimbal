@@ -63,7 +63,7 @@ void setup() {
       delay(100);
     }
   }
-  setRemap(); //TODO: Figure out remap
+  setRemap(0b00100001, 0b00000000); //TODO: Figure out remap
   delay(2000);
   lastread = millis();
 }
@@ -71,7 +71,7 @@ void setup() {
 
 void loop() {
   float euler[3];
-  getEuler(euler);
+  getQuat(euler);
   //x = euler[0], y = euler[1], z = euler[2]
   yawTotal = euler[0];
   if (euler[0] > 180){
