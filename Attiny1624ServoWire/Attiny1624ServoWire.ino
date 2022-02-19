@@ -10,6 +10,7 @@ int y = 1500;
 int z = 1500;
 long xbusy; //millisecond timestamp of when the x servo was last told to spin around one rotation
 float yawTotal;
+float previousEuler[3];
 
 #define XPIN 0
 #define YPIN 1
@@ -68,7 +69,6 @@ void setup() {
   lastread = millis();
 }
 
-
 void loop() {
   float euler[3];
   getEuler(euler);
@@ -79,16 +79,18 @@ void loop() {
   if (euler[0] > 180){
     yawTotal -= 360;
   }
-  int cut = 0;
+  int cut = 3;
   int jerk = 0;
-  int celerity = 100;
-  if(millis() - xbusy > SPINDELAY && yawTotal>=cut)
+  int celerity = 120;
+  int yawCelerity = 100;
+  int t = millis();
+  if(t - xbusy > SPINDELAY && yawTotal>=cut)
   {
-    x+=map(yawTotal,cut,180,jerk,celerity/2);
+    x+=map(yawTotal,cut,180,jerk,yawCelerity/2);
   }
-  else if(millis() - xbusy > SPINDELAY && yawTotal<=-cut)
+  else if(t - xbusy > SPINDELAY && yawTotal<=-cut)
   {
-    x-=map(yawTotal,-180,-cut,celerity/2,jerk);
+    x-=map(yawTotal,-180,-cut,yawCelerity/2,jerk);
   }
   
   if(euler[1]>=cut)
@@ -99,6 +101,7 @@ void loop() {
   {
     y+=map(euler[1],-90,-cut,celerity,jerk);
   }
+  
   if(euler[2]>=cut)
   {
     z-=map(euler[2],cut,90,jerk,celerity);
@@ -107,12 +110,33 @@ void loop() {
   {
     z+=map(euler[2],-90,-cut,celerity,jerk);
   }
+
+  float xdiv;
+  float ydiv;
+  float zdiv;
+  t = millis();
+  if (t - xbusy > SPINDELAY) {
+    xdiv = (yawTotal - previousEuler[0])/((t - xbusy))*0.01;
+    //x += xdiv;
+  }
+  ydiv = (euler[1] - previousEuler[1])/((t - xbusy))*0.1;
+  y += ydiv;
+  zdiv = (euler[2] - previousEuler[2])/((t - xbusy))*0.1;
+  z += zdiv;
+  previousEuler[0] = euler[0];
+  previousEuler[1] = euler[1];
+  previousEuler[2] = euler[2];
+
+  Serial.print("xdiv:" + String(xdiv));
+  Serial.print(" ydiv:" + String(ydiv));
+  Serial.print(" zdiv:" + String(zdiv));
+  Serial.println();
   Serial.print("SERVO X: " + String(x));
   Serial.print(" Y: " + String(y));
   Serial.print(" Z: " + String(z));
   Serial.println();
-  if(x<MINPULSE){x=MINPULSE + 1333; servoX.writeMicroseconds(x); xbusy = millis(); }
-  if(x>MAXPULSE){x=MAXPULSE - 1333; servoX.writeMicroseconds(x); xbusy = millis(); }
+  if(x<MINPULSE){x=MINPULSE + 1200; servoX.writeMicroseconds(x); xbusy = millis(); }
+  if(x>MAXPULSE){x=MAXPULSE - 1200; servoX.writeMicroseconds(x); xbusy = millis(); }
   if(y<MINPULSE){y=MINPULSE;}
   if(y>MAXPULSE){y=MAXPULSE;}
   if(z<MINPULSE){z=MINPULSE;}
