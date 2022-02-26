@@ -83,12 +83,12 @@ void loop() {
   int jerk = 0;
   int celerity = 120;
   int yawCelerity = 100;
-  int t = millis();
-  if(t - xbusy > SPINDELAY && yawTotal>=cut)
+  //int t = millis();
+  if(millis() - xbusy > SPINDELAY && yawTotal>=cut)
   {
     x+=map(yawTotal,cut,180,jerk,yawCelerity/2);
   }
-  else if(t - xbusy > SPINDELAY && yawTotal<=-cut)
+  else if(millis() - xbusy > SPINDELAY && yawTotal<=-cut)
   {
     x-=map(yawTotal,-180,-cut,yawCelerity/2,jerk);
   }
@@ -114,14 +114,14 @@ void loop() {
   float xdiv;
   float ydiv;
   float zdiv;
-  t = millis();
-  if (t - xbusy > SPINDELAY) {
-    xdiv = (yawTotal - previousEuler[0])/((t - xbusy))*0.01;
+  //t = millis();
+  if (millis() - xbusy > SPINDELAY) {
+    //bxdiv = (yawTotal - previousEuler[0])/((t - xbusy))*0.01;
     //x += xdiv;
   }
-  ydiv = (euler[1] - previousEuler[1])/((t - xbusy))*0.1;
+  //ydiv = (euler[1] - previousEuler[1])/((t - xbusy))*0.1;
   y += ydiv;
-  zdiv = (euler[2] - previousEuler[2])/((t - xbusy))*0.1;
+  //zdiv = (euler[2] - previousEuler[2])/((t - xbusy))*0.1;
   z += zdiv;
   previousEuler[0] = euler[0];
   previousEuler[1] = euler[1];
