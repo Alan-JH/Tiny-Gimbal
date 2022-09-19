@@ -4,138 +4,107 @@
 
 Servo servoX;
 Servo servoY;
-Servo servoZ;
-int x = 1500;
-int y = 1500;
-int z = 1500;
-long xbusy; //millisecond timestamp of when the x servo was last told to spin around one rotation
-float yawTotal;
 
 #define XPIN 0
 #define YPIN 1
-#define ZPIN 10
+
+#define XCENTER 1500
+#define YCENTER 1500
+#define XREMOVE 1700
+#define YREMOVE 1500
+
+int x = XCENTER;
+int y = YCENTER;
 
 #define MINPULSE 600
 #define MAXPULSE 2400
 
-#define SPINDELAY 1500
+#define CENTERPIN 2
+#define REMOVEPIN 3
 
-#define NOTIFTHRESH 5
-
-#define ERRORPIN 4 // Pin gets pulled high in case of instantiation error
-
-#define NOTIFPIN 2 // Pin gets pulled high when yaw is reset from 360 to 0, to indicate that camera is not ready.
-
-bool notif;
-long timeon;
-long timeoff;
-long lastread;
-void print_dutycycle(){
-  if (notif){
-    timeon += millis()-lastread;
-    lastread = millis();
-  }else{
-    timeoff += millis()-lastread;
-    lastread = millis();
-  }
-  Serial.println("Time on: " + String(timeon) + " Time off: " + String(timeoff));
-}
+bool center;
+bool centerprevious = 1;
+bool remove;
+bool removeprevious = 1;
 
 void setup() {
-  Serial.pins(5, 3);
+  Serial.pins(5, 4);
   Serial.begin(57600, (SERIAL_8N1)); // Debug UART
-  pinMode(ERRORPIN, OUTPUT); // Error pin, goes high if error state
-  pinMode(NOTIFPIN, OUTPUT); // Notifies pi when camera is spinning around one rotation
-  digitalWrite(ERRORPIN, LOW);
-  digitalWrite(NOTIFPIN, LOW);
   servoX.attach(XPIN);
   servoY.attach(YPIN);
-  servoZ.attach(ZPIN);
   servoX.writeMicroseconds(x);
   servoY.writeMicroseconds(y);
-  servoZ.writeMicroseconds(z);
+  pinMode(CENTERPIN, INPUT_PULLUP);
+  pinMode(REMOVEPIN, INPUT_PULLUP);
   delay(1000);
   if (!IMUBegin(OPERATION_MODE_NDOF)){
     while (1){
-      digitalWrite(ERRORPIN, HIGH);
-      delay(100);
-      digitalWrite(ERRORPIN, LOW);
-      delay(100);
+      Serial.println("Failed to initialize IMU");
+      delay(1000);
     }
   }
   //setRemap(0b00100100, 0b00000000);
   delay(2000);
-  lastread = millis();
 }
 
 
 void loop() {
   float euler[3];
   getEuler(euler);
-  //x = euler[0], y = euler[1], z = euler[2]
-  yawTotal = euler[0];
   euler[1] = -1*euler[1];
   euler[2] = -1*euler[2];
-  if (euler[0] > 180){
-    yawTotal -= 360;
-  }
   int cut = 0;
   int jerk = 0;
   int celerity = 100;
-  if(millis() - xbusy > SPINDELAY && yawTotal>=cut)
-  {
-    x+=map(yawTotal,cut,180,jerk,celerity/2);
+
+  if (!digitalRead(CENTERPIN) && centerprevious){
+    center = !center;
   }
-  else if(millis() - xbusy > SPINDELAY && yawTotal<=-cut)
-  {
-    x-=map(yawTotal,-180,-cut,celerity/2,jerk);
+  centerprevious = digitalRead(CENTERPIN);
+
+  if (!digitalRead(REMOVEPIN) && removeprevious){
+    remove = !remove;
   }
-  
-  if(euler[1]>=cut)
-  {
-    y-=map(euler[1],cut,90,jerk,celerity);
+  centerprevious = digitalRead(CENTERPIN);
+  removeprevious = digitalRead(REMOVEPIN);
+
+  if (center){
+    x = XCENTER;
+    y = YCENTER;
+  } else if (remove){
+    x = XREMOVE;
+    y = YREMOVE;
+  } else {
+
+    if(euler[1]>=cut)
+    {
+      x-=map(euler[1],cut,90,jerk,celerity);
+    }
+    else if(euler[1]<=-cut)
+    {
+      x+=map(euler[1],-90,-cut,celerity,jerk);
+    }
+    if(euler[2]>=cut)
+    {
+      y-=map(euler[2],cut,90,jerk,celerity);
+    }
+    else if(euler[2]<=-cut)
+    {
+      y+=map(euler[2],-90,-cut,celerity,jerk);
+    }
+    Serial.print("SERVO X: " + String(x));
+    Serial.print(" Y: " + String(y));
+    Serial.println();
+    x = min(max(x, MINPULSE), MAXPULSE)
+    y = min(max(y, MINPULSE), MAXPULSE)
   }
-  else if(euler[1]<=-cut)
-  {
-    y+=map(euler[1],-90,-cut,celerity,jerk);
-  }
-  if(euler[2]>=cut)
-  {
-    z-=map(euler[2],cut,90,jerk,celerity);
-  }
-  else if(euler[2]<=-cut)
-  {
-    z+=map(euler[2],-90,-cut,celerity,jerk);
-  }
-  Serial.print("SERVO X: " + String(x));
-  Serial.print(" Y: " + String(y));
-  Serial.print(" Z: " + String(z));
-  Serial.println();
-  if(x<MINPULSE){x=MINPULSE + 1333; servoX.writeMicroseconds(x); xbusy = millis(); }
-  if(x>MAXPULSE){x=MAXPULSE - 1333; servoX.writeMicroseconds(x); xbusy = millis(); }
-  if(y<MINPULSE){y=MINPULSE;}
-  if(y>MAXPULSE){y=MAXPULSE;}
-  if(z<MINPULSE){z=MINPULSE;}
-  if(z>MAXPULSE){z=MAXPULSE;}
-  if (millis() - xbusy > SPINDELAY ){
-    servoX.writeMicroseconds(x);
-  }
-  if (abs(yawTotal) < NOTIFTHRESH && abs(euler[1]) < NOTIFTHRESH && abs(euler[2]) < NOTIFTHRESH){
-    digitalWrite(NOTIFPIN, HIGH); 
-    notif = true;
-  }else{
-    digitalWrite(NOTIFPIN, LOW);
-    notif = false;
-  }
+  servoX.writeMicroseconds(x);
   servoY.writeMicroseconds(y);
-  servoZ.writeMicroseconds(z);
+  
   //Debug print
-  Serial.print("SENSOR X: " + String(euler[0]));
-  Serial.print(" Y: " + String(euler[1]));
-  Serial.print(" Z: " + String(euler[2]));
-  Serial.print(" YAWTOTAL: " + String(yawTotal));
+  Serial.print("SENSOR X: " + String(euler[1]));
+  Serial.print(" Y: " + String(euler[2]));
   Serial.println();
-  print_dutycycle();
 }
 
 bool IMUBegin(byte mode){
