@@ -9,15 +9,15 @@ Servo servoY;
 #define YPIN 1
 
 #define XCENTER 1500
-#define YCENTER 1500
-#define XREMOVE 1700
-#define YREMOVE 1500
+#define YCENTER 1450
+#define XREMOVE 1900
+#define YREMOVE 1450
 
 int x = XCENTER;
 int y = YCENTER;
 
-#define MINPULSE 600
-#define MAXPULSE 2400
+#define MINPULSE 800
+#define MAXPULSE 2200
 
 #define CENTERPIN 2
 #define REMOVEPIN 3
@@ -44,18 +44,18 @@ void setup() {
     }
   }
   //setRemap(0b00100100, 0b00000000);
-  delay(2000);
+  delay(500);
 }
 
 
 void loop() {
   float euler[3];
   getEuler(euler);
-  euler[1] = -1*euler[1];
-  euler[2] = -1*euler[2];
+  euler[1] = -1*euler[1]; // Y
+  //euler[2] = -1*euler[2]; // X inversion
   int cut = 0;
   int jerk = 0;
-  int celerity = 100;
+  int celerity = 120;
 
   if (!digitalRead(CENTERPIN) && centerprevious){
     center = !center;
@@ -76,21 +76,21 @@ void loop() {
     y = YREMOVE;
   } else {
 
-    if(euler[1]>=cut)
-    {
-      x-=map(euler[1],cut,90,jerk,celerity);
-    }
-    else if(euler[1]<=-cut)
-    {
-      x+=map(euler[1],-90,-cut,celerity,jerk);
-    }
     if(euler[2]>=cut)
     {
-      y-=map(euler[2],cut,90,jerk,celerity);
+      x-=map(euler[2],cut,90,jerk,celerity);
     }
     else if(euler[2]<=-cut)
     {
-      y+=map(euler[2],-90,-cut,celerity,jerk);
+      x+=map(euler[2],-90,-cut,celerity,jerk);
+    }
+    if(euler[1]>=cut)
+    {
+      y-=map(euler[1],cut,90,jerk,celerity);
+    }
+    else if(euler[1]<=-cut)
+    {
+      y+=map(euler[1],-90,-cut,celerity,jerk);
     }
     Serial.print("SERVO X: " + String(x));
     Serial.print(" Y: " + String(y));
@@ -102,8 +102,8 @@ void loop() {
   servoY.writeMicroseconds(y);
   
   //Debug print
-  Serial.print("SENSOR X: " + String(euler[1]));
-  Serial.print(" Y: " + String(euler[2]));
+  Serial.print("SENSOR X: " + String(euler[2]));
+  Serial.print(" Y: " + String(euler[1]));
   Serial.println();
 }
 
