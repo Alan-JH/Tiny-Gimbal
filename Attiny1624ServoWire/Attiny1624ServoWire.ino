@@ -24,7 +24,7 @@ int y = YCENTER;
 
 bool center;
 bool centerprevious = 1;
-bool remove;
+bool removecamera;
 bool removeprevious = 1;
 
 void setup() {
@@ -63,7 +63,7 @@ void loop() {
   centerprevious = digitalRead(CENTERPIN);
 
   if (!digitalRead(REMOVEPIN) && removeprevious){
-    remove = !remove;
+    removecamera = !removecamera;
   }
   centerprevious = digitalRead(CENTERPIN);
   removeprevious = digitalRead(REMOVEPIN);
@@ -71,7 +71,7 @@ void loop() {
   if (center){
     x = XCENTER;
     y = YCENTER;
-  } else if (remove){
+  } else if (removecamera){
     x = XREMOVE;
     y = YREMOVE;
   } else {
@@ -95,8 +95,8 @@ void loop() {
     Serial.print("SERVO X: " + String(x));
     Serial.print(" Y: " + String(y));
     Serial.println();
-    x = min(max(x, MINPULSE), MAXPULSE)
-    y = min(max(y, MINPULSE), MAXPULSE)
+    x = min(max(x, MINPULSE), MAXPULSE);
+    y = min(max(y, MINPULSE), MAXPULSE);
   }
   servoX.writeMicroseconds(x);
   servoY.writeMicroseconds(y);
