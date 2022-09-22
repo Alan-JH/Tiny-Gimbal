@@ -5,7 +5,7 @@ Code and pcb for two axis self stabilizing servo gimbal using BNO055 and ATTiny1
 Version for the See3Cam CU135, with 3 axis stabilization. Code was developed and used, but PCB was never manufactured
 
 ### V2.1
-Due to poor results with the See3Cam, TJUAV has decided to switch to the Sony alpha cameras, specifically the A5100. 
+Due to poor results with the See3Cam, TJUAV has decided to switch to the Sony alpha cameras, specifically the A5100. However, all testing so far has been done with an A5000 camera we already have, which should be dimensionally identical to the A5100, although slower.
 
 Yaw stabilization was removed, for the sake of weight saving and ease of cable management
 The mechanism for the gimbal was completely overhauled, needing to be stronger for the camera being 400g instead of 20g
