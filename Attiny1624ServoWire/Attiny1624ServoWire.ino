@@ -32,7 +32,7 @@ bool removeprevious = 1;
 // PID Loop Parameters
 int Kp = 2;
 int Kd = 200;
-int Ki = 10;
+int Ki = 0;
 long long lastreading; // in microseconds
 float lastXError;
 float lastYError;
