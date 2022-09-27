@@ -36,6 +36,10 @@ int Kd = 200;
 long long lastreading; // in microseconds
 float lastXError;
 float lastYError;
+float dEx;
+float dEy;
+float intEx;
+float intEy;
 
 void setup() {
   Serial.pins(5, 4);
@@ -84,10 +88,11 @@ void loop() {
     x = XREMOVE;
     y = YREMOVE;
   } else {
-    float dEx = (euler[2] - lastXError) / (micros() - lastreading);
+    float dt = micros() - lastreading;
+    dEx = (euler[2] - lastXError) / (micros() - lastreading);
     x -= Kp*euler[2] + Kd * dEx;
 
-    float dEy = (euler[1] - lastYError) / (micros() - lastreading);
+    dEy = (euler[1] - lastYError) / (micros() - lastreading);
     y -= Kp*euler[1] + Kd * dEy;
     
     lastreading = micros();
