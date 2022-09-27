@@ -29,16 +29,16 @@ bool centerprevious = 1;
 bool removecamera;
 bool removeprevious = 1;
 
-// PD Loop Parameters
-// Not implement integral because it would be a pain to implement with center and remove functionality
+// PID Loop Parameters
 int Kp = 2;
 int Kd = 200;
+int Ki = 10;
 long long lastreading; // in microseconds
 float lastXError;
 float lastYError;
-float dEx;
+float dEx; // Derivative
 float dEy;
-float intEx;
+float intEx; // Integral
 float intEy;
 
 void setup() {
@@ -66,9 +66,6 @@ void loop() {
   getEuler(euler);
   euler[1] = -1*euler[1]; // Y
   //euler[2] = -1*euler[2]; // X inversion
-  int cut = 0;
-  int jerk = 0;
-  int celerity = 120;
 
   if (!digitalRead(CENTERPIN) && centerprevious){
     center = !center;
@@ -84,16 +81,24 @@ void loop() {
   if (center){
     x = XCENTER;
     y = YCENTER;
+    intEx = 0; // Make sure integral doesn't go haywire while centered or removed
+    intEy = 0;
+    lastreading = micros();
   } else if (removecamera){
     x = XREMOVE;
     y = YREMOVE;
+    intEx = 0;
+    intEy = 0;
+    lastreading = micros();
   } else {
     float dt = micros() - lastreading;
-    dEx = (euler[2] - lastXError) / (micros() - lastreading);
-    x -= Kp*euler[2] + Kd * dEx;
+    dEx = (euler[2] - lastXError);
+    intEx += euler[2] * dt;
+    x -= Kp*euler[2] + Kd * dEx/dt + Ki * intEx;
 
-    dEy = (euler[1] - lastYError) / (micros() - lastreading);
-    y -= Kp*euler[1] + Kd * dEy;
+    dEy = (euler[1] - lastYError);
+    intEy += euler[1] * dt;
+    y -= Kp*euler[1] + Kd * dEy/dt + Ki * intEy;
     
     lastreading = micros();
     lastXError = euler[2];
