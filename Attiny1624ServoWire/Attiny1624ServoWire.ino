@@ -8,6 +8,7 @@ Servo servoY;
 #define XPIN 0
 #define YPIN 1
 
+// Tunable values for center and remove position servo values
 #define XCENTER 1500
 #define YCENTER 1450
 #define XREMOVE 1900
@@ -22,10 +23,19 @@ int y = YCENTER;
 #define CENTERPIN 2
 #define REMOVEPIN 3
 
+// Center and Remove Button Variables
 bool center;
 bool centerprevious = 1;
 bool removecamera;
 bool removeprevious = 1;
+
+// PD Loop Parameters
+// Not implement integral because it would be a pain to implement with center and remove functionality
+int Kp = 1;
+int Kd = 100;
+long long lastreading; // in microseconds
+float lastXError;
+float lastYError;
 
 void setup() {
   Serial.pins(5, 4);
@@ -43,8 +53,7 @@ void setup() {
       delay(1000);
     }
   }
-  //setRemap(0b00100100, 0b00000000);
-  delay(500);
+  lastreading = micros();
 }
 
 
@@ -75,23 +84,16 @@ void loop() {
     x = XREMOVE;
     y = YREMOVE;
   } else {
+    dEx = (euler[2] - lastXError) / (micros() - lastreading);
+    x += Kp*euler[2] + Kd * dEx;
 
-    if(euler[2]>=cut)
-    {
-      x-=map(euler[2],cut,90,jerk,celerity);
-    }
-    else if(euler[2]<=-cut)
-    {
-      x+=map(euler[2],-90,-cut,celerity,jerk);
-    }
-    if(euler[1]>=cut)
-    {
-      y-=map(euler[1],cut,90,jerk,celerity);
-    }
-    else if(euler[1]<=-cut)
-    {
-      y+=map(euler[1],-90,-cut,celerity,jerk);
-    }
+    dEy = (euler[1] - lastYError) / (micros() - lastreading);
+    y += Kp*euler[1] + Kd * dEy;
+    
+    lastreading = micros();
+    lastXError = euler[2];
+    lastYError = euler[1];
+    
     Serial.print("SERVO X: " + String(x));
     Serial.print(" Y: " + String(y));
     Serial.println();
@@ -106,6 +108,8 @@ void loop() {
   Serial.print(" Y: " + String(euler[1]));
   Serial.println();
 }
+
+// BNO055 Driver implementation:
 
 bool IMUBegin(byte mode){
     Wire.begin();
