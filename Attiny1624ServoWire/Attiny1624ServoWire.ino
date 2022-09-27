@@ -31,8 +31,8 @@ bool removeprevious = 1;
 
 // PD Loop Parameters
 // Not implement integral because it would be a pain to implement with center and remove functionality
-int Kp = 1;
-int Kd = 100;
+int Kp = 2;
+int Kd = 200;
 long long lastreading; // in microseconds
 float lastXError;
 float lastYError;
@@ -84,11 +84,11 @@ void loop() {
     x = XREMOVE;
     y = YREMOVE;
   } else {
-    dEx = (euler[2] - lastXError) / (micros() - lastreading);
-    x += Kp*euler[2] + Kd * dEx;
+    float dEx = (euler[2] - lastXError) / (micros() - lastreading);
+    x -= Kp*euler[2] + Kd * dEx;
 
-    dEy = (euler[1] - lastYError) / (micros() - lastreading);
-    y += Kp*euler[1] + Kd * dEy;
+    float dEy = (euler[1] - lastYError) / (micros() - lastreading);
+    y -= Kp*euler[1] + Kd * dEy;
     
     lastreading = micros();
     lastXError = euler[2];
