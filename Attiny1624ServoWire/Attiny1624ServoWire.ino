@@ -30,9 +30,12 @@ bool removecamera;
 bool removeprevious = 1;
 
 // PID Loop Parameters
-int Kp = 2;
-int Kd = 200;
-int Ki = 0;
+float XKp = 1.6;
+float XKd = 50000;
+float XKi = 0;
+float YKp = 2;
+float YKd = 70000;
+float YKi = 0;
 long long lastreading; // in microseconds
 float lastXError;
 float lastYError;
@@ -94,11 +97,11 @@ void loop() {
     float dt = micros() - lastreading;
     dEx = (euler[2] - lastXError);
     intEx += euler[2] * dt;
-    x -= Kp*euler[2] + Kd * dEx/dt + Ki * intEx;
+    x -= XKp*euler[2] + XKd * dEx/dt + XKi * intEx;
 
     dEy = (euler[1] - lastYError);
     intEy += euler[1] * dt;
-    y -= Kp*euler[1] + Kd * dEy/dt + Ki * intEy;
+    y -= YKp*euler[1] + YKd * dEy/dt + YKi * intEy;
     
     lastreading = micros();
     lastXError = euler[2];
