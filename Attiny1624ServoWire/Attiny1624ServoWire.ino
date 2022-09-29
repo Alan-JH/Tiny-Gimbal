@@ -1,3 +1,9 @@
+/*
+ * Tiny-Gimbal control code, for board v2.2
+ * Alan Hsu
+ * 29 September 2022
+*/
+
 #include "BNO055Constants.h"
 #include <Servo.h> // Use MegaTinyCore implementation of Servo
 #include <Wire.h>
@@ -5,10 +11,12 @@
 Servo servoX;
 Servo servoY;
 
+// Servo PWM pin definitions
 #define XPIN 0
 #define YPIN 1
 
-// Tunable values for center and remove position servo values
+// Tunable values for center and remove position servo values. 
+// Center centers each axis, while remove places the gimbal in a position where the camera is easy to remove
 #define XCENTER 1500
 #define YCENTER 1450
 #define XREMOVE 1900
@@ -17,11 +25,17 @@ Servo servoY;
 int x = XCENTER;
 int y = YCENTER;
 
+// Minimum and maximum allowable servo pulse width
 #define MINPULSE 800
 #define MAXPULSE 2200
 
+// Pin definitions for center and remove buttons
 #define CENTERPIN 2
 #define REMOVEPIN 3
+
+// Pin definitions for center and remove indicator LEDs
+#define CENTERLED 10
+#define REMOVELED 9
 
 // Center and Remove Button Variables
 bool center;
@@ -45,55 +59,74 @@ float intEx; // Integral
 float intEy;
 
 void setup() {
+  // Set debug UART pins to default, initialize to 57600 baud
   Serial.pins(5, 4);
-  Serial.begin(57600, (SERIAL_8N1)); // Debug UART
+  Serial.begin(57600, (SERIAL_8N1));
+
+  // Set button and LED indicator pin modes
+  pinMode(CENTERPIN, INPUT_PULLUP);
+  pinMode(REMOVEPIN, INPUT_PULLUP);
+  pinMode(CENTERLED, OUTPUT);
+  pinMode(REMOVELED, OUTPUT);
+
+  // Initialize servos, write center position
   servoX.attach(XPIN);
   servoY.attach(YPIN);
   servoX.writeMicroseconds(x);
   servoY.writeMicroseconds(y);
-  pinMode(CENTERPIN, INPUT_PULLUP);
-  pinMode(REMOVEPIN, INPUT_PULLUP);
+
+  // Wait for servos to center, then initialize IMU
   delay(1000);
   if (!IMUBegin(OPERATION_MODE_NDOF)){
-    while (1){
+    while (1){ // If IMU fails to intialize, error message and do not proceed to loop
       Serial.println("Failed to initialize IMU");
       delay(1000);
     }
-  }
+  } 
+
+  // Set last reading variable for PID
   lastreading = micros();
 }
 
 
 void loop() {
+  // Get Euler sensor values
   float euler[3];
   getEuler(euler);
-  euler[1] = -1*euler[1]; // Y
+  euler[1] = -1*euler[1]; // Y inversion
   //euler[2] = -1*euler[2]; // X inversion
 
+  // If center button is pressed, toggle center bool and make sure remove is false so both arent true at once
   if (!digitalRead(CENTERPIN) && centerprevious){
     center = !center;
+    removecamera = false;
   }
-  centerprevious = digitalRead(CENTERPIN);
 
+  // If remove button is pressed, toggle remove bool and make sure center is false so both arent true at once
   if (!digitalRead(REMOVEPIN) && removeprevious){
     removecamera = !removecamera;
+    center = false;
   }
   centerprevious = digitalRead(CENTERPIN);
   removeprevious = digitalRead(REMOVEPIN);
 
-  if (center){
+  // Set LED indicators appropriately
+  digitalWrite(REMOVELED, removecamera);
+  digitalWrite(CENTERLED, center);
+
+  if (center){ // If center is true, set x and y vals to centered PWM position
     x = XCENTER;
     y = YCENTER;
     intEx = 0; // Make sure integral doesn't go haywire while centered or removed
     intEy = 0;
     lastreading = micros();
-  } else if (removecamera){
+  } else if (removecamera){ // If remove is true, set x and y vals to remove PWM position
     x = XREMOVE;
     y = YREMOVE;
     intEx = 0;
     intEy = 0;
     lastreading = micros();
-  } else {
+  } else { // If neither center or remove, calculate PID
     float dt = micros() - lastreading;
     dEx = (euler[2] - lastXError);
     intEx += euler[2] * dt;
@@ -106,13 +139,13 @@ void loop() {
     lastreading = micros();
     lastXError = euler[2];
     lastYError = euler[1];
-    
-    Serial.print("SERVO X: " + String(x));
-    Serial.print(" Y: " + String(y));
-    Serial.println();
+
+    // Clamp servo PWM values to min and max
     x = min(max(x, MINPULSE), MAXPULSE);
     y = min(max(y, MINPULSE), MAXPULSE);
   }
+
+  // Write to servos
   servoX.writeMicroseconds(x);
   servoY.writeMicroseconds(y);
   
