@@ -24,4 +24,4 @@ Single bearing instead of dual bearing Y frame mechanism, to save mass
 Sideways X servo, to save mass and size
 Integrated buck converter mount on the spar clamp
 
-Yet to be manufactured and tested
+Tested and working
