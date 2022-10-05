@@ -44,11 +44,11 @@ bool removecamera;
 bool removeprevious = 1;
 
 // PID Loop Parameters
-float XKp = 1.6;
-float XKd = 50000;
+float XKp = 2.2;
+float XKd = 100000;
 float XKi = 0;
-float YKp = 2;
-float YKd = 70000;
+float YKp = 2.5;
+float YKd = 80000;
 float YKi = 0;
 long long lastreading; // in microseconds
 float lastXError;
@@ -153,6 +153,7 @@ void loop() {
   Serial.print("SENSOR X: " + String(euler[2]));
   Serial.print(" Y: " + String(euler[1]));
   Serial.println();
+  delay(5);
 }
 
 // BNO055 Driver implementation:
